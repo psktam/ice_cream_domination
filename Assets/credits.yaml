@@ -1,0 +1,16 @@
+crash sounds: 
+  - name: n Beats
+    ref: https://www.youtube.com/channel/UCqeNgQLxwkV8TqEyxG_q60Q
+    sources:
+    - https://www.youtube.com/watch?v=KufuaNASWa0
+explosion sounds:
+  - name: solosound
+    ref: https://www.youtube.com/channel/UCmG2hih8M3lXz4pRfXzEeUA
+    sources:
+    - https://www.youtube.com/watch?v=aZZmZqaCwSI
+road architect:
+  - name: road architect
+    ref: https://github.com/MicroGSD/RoadArchitect
+k-d tree:
+  - name: k-d tree
+  - ref: https://github.com/viliwonka/KDTree
