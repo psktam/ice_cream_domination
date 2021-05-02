@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+using Utils;
 using DataStructures.ViliWonka.KDTree;
+using DataStructures.ViliWonka.Heap;
 
 
 [System.Serializable]
@@ -215,6 +217,11 @@ public class TrafficEditor : Editor {
             idx++;
         }
         manager.nodes = new List<TrafficNode>(interpolated_nodes);
+        manager.idx_map = new Dictionary<TrafficNode, int>();
+        for (int i = 0; i < manager.nodes.Count; i++)
+        {
+            manager.idx_map[manager.nodes[i]] = i;
+        }
     }
 
     public override void OnInspectorGUI()
@@ -231,8 +238,26 @@ public class TrafficEditor : Editor {
 public class TrafficManager : MonoBehaviour
 {
     public List<TrafficNode> nodes;
+    public Dictionary<TrafficNode, int> idx_map;
     public KDTree kdtree;
     public Dictionary<Vector3, TrafficNode> nodemap;
+
+    static bool _set = false;
+    static TrafficManager _reference;
+
+    public static TrafficManager Instance
+    {
+        get
+        {
+            if (!_set)
+            {
+                _reference = (TrafficManager)FindObjectOfType(
+                    typeof(TrafficManager));
+                _set = true;
+            }
+            return _reference;
+        }
+    }
 
     // Start is called before the first frame update
     void Start()
@@ -257,17 +282,59 @@ public class TrafficManager : MonoBehaviour
 
     // Return a list of all TrafficNodes that are in the sphere defined by the 
     // given inputs.
-    public List<TrafficNode> query (Vector3 center, float radius)
+    public List<int> query (Vector3 point)
     {
         KDQuery q = new KDQuery();
-        List<int> indices = new List<int>();
-        q.Radius(kdtree, center, radius, indices);
-        var found_nodes = new List<TrafficNode>(indices.Count);
-        for (int i = 0; i < indices.Count; i++)
+        var result_idx = new List<int>();
+        var result_distances = new List<float>();
+        q.ClosestPoint(kdtree, point, result_idx, result_distances);
+        return result_idx;
+    }
+   
+    // Compute path between two nodes
+    public List<int> calculate_path(int start_idx, int stop_idx)
+    {
+        var cost_so_far = new Dictionary<int, float>();
+        var frontier = new MinHeap<int>();
+        var came_from = new Dictionary<int, int>();
+        cost_so_far[start_idx] = 0.0f;
+        frontier.PushObj(start_idx, 0.0f);
+        var stop = nodes[stop_idx];
+
+        while (frontier.Count > 0)
         {
-            found_nodes[i] = nodes[indices[i]];
+            var current_idx = frontier.PopObj();
+            var current = nodes[current_idx];
+            foreach (var neighbor in current.connected_to)
+            {
+                var neighbor_idx = idx_map[neighbor];
+                if (neighbor_idx == current_idx){ continue; }
+                var new_cost = cost_so_far[current_idx] + 
+                               (neighbor.position - current.position).magnitude;
+                if (!cost_so_far.ContainsKey(neighbor_idx) || 
+                    (cost_so_far[neighbor_idx] > new_cost))
+                {
+                    cost_so_far[neighbor_idx] = new_cost;
+                    var priority = new_cost + (stop.position - 
+                                               neighbor.position).magnitude;
+                    frontier.PushObj(neighbor_idx, priority);
+                    came_from[neighbor_idx] = current_idx;
+                }
+            }
         }
-        return found_nodes;
+
+        // At this point, we can reconstruct the path
+        var output_path = new List<int>();
+        int this_idx = stop_idx;
+        output_path.Add(stop_idx);
+        while (this_idx != start_idx)
+        {
+            var prev_idx = came_from[this_idx];
+            output_path.Add(prev_idx);
+            this_idx = prev_idx;
+        }
+        output_path.Reverse();
+        return output_path;
     }
 
     # if UNITY_EDITOR

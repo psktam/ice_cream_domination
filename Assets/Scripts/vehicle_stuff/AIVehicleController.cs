@@ -14,21 +14,21 @@ using UnityEngine.AI;
 
 public class AIVehicleController : MonoBehaviour
 {
-    public EngineControl engine;
-    public DriveTrainControl driveTrain;
-    TrafficManager traffic_manager;
+    public int target_idx;
+    public OnRoadController orc;
 
     // Start is called before the first frame update
     void Start()
     {
-        // Map the traffic manager. Too lazy to figure out how to use 
-        // singletons with components, so I'm just going to use this in the 
-        // Start call.
-        traffic_manager = FindObjectOfType<TrafficManager>();
     }
 
-    // Update is called once per frame
     void Update()
     {
+
+    }
+
+    void FixedUpdate()
+    {
+        var next_state = orc.next_state(target_idx);
     }
 }
